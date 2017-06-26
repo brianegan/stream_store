@@ -1,0 +1,15 @@
+name: stream_store
+description: A Redux Store implemented with Dart Stream primitives
+version: 0.0.1
+homepage: https://gitlab.com/brianegan/stream_store
+author: brian.egan <brian@brianegan.com>
+
+environment:
+  sdk: '>=1.21.0 <2.0.0'
+
+dependencies:
+  rxdart: 0.13.1
+  logging: ">=0.11.3 <0.12.0"
+
+dev_dependencies:
+  test:

@@ -1,0 +1,39 @@
+image: brianegan/dart-lcov:release-1.24.2
+
+stages:
+  - test
+  - deploy
+
+dartfmt:
+  stage: test
+  script: dartfmt -n .
+
+unit_test:
+  stage: test
+  script: pub get && pub run test/stream_store_test.dart
+
+coverage:
+  stage: test
+  script:
+    - export PATH="$PATH":"~/.pub-cache/bin"
+    - pub get --packages-dir
+    - pub global activate coverage
+    - pub global run coverage:collect_coverage --port=8111 -o coverage.json --resume-isolates --wait-paused &
+    - dart --observe=8111 test/stream_store_test.dart
+    - pub global run coverage:format_coverage --package-root=packages --report-on lib --in coverage.json --out lcov.info --lcov
+    - genhtml lcov.info --output=coverage
+  artifacts:
+    paths:
+      - coverage/
+
+pages:
+  stage: deploy
+  dependencies:
+    - coverage
+  script:
+    - mv coverage/ public/coverage/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
