@@ -1,65 +1,51 @@
+import 'dart:async';
 import 'package:logging/logging.dart';
 import "package:stream_store/stream_store.dart";
 import "package:test/test.dart";
-import "test_utils.dart";
 
 void main() {
   group("LoggingTransformer", () {
-    Logger logger;
+    int addReducer(int state, action) => action is int ? state + action : state;
 
-    setUp(() {
-      logger = new Logger("LoggingTransformerTest");
-    });
+    test("logs actions and state to the given logger", () async {
+      final transformer = new LoggingTransformer();
+      // ignore: close_sinks
+      final store =
+          new Store(addReducer, initialState: 1, transformers: [transformer]);
 
-    tearDown(() {
-      logger = null;
-    });
-
-    test("logs actions and states as they come through with an optional tag",
-        () async {
-      final actionTag = "Action:";
-      final stateTag = "State:";
-      final store = new Store(addReducer, initialState: 1, actionTransformers: [
-        new LoggingTransformer(
-          logger,
-          tag: actionTag,
-        )
-      ], stateTransformers: [
-        new LoggingTransformer<int>(
-          logger,
-          tag: stateTag,
-        )
-      ]);
-
-      store.add(1);
+      scheduleMicrotask(() {
+        store.add(1);
+      });
 
       await expect(
-          logger.onRecord,
-          emitsInOrder([
-            new logMessageContains(["$actionTag 1"]),
-            new logMessageContains(["$stateTag 2"])
-          ]));
-
-      store.close();
+        transformer.logger.onRecord,
+        emits(new logMessageContains(["{Action: 1, "])),
+      );
     });
 
     test("can be configured with the correct logging level", () async {
+      final logger = new Logger("Test");
+      // ignore: close_sinks
       final store = new Store(
         addReducer,
         initialState: 0,
-        stateTransformers: [
-          new LoggingTransformer<int>(
-            logger,
+        transformers: [
+          new LoggingTransformer(
+            logger: logger,
             level: Level.SEVERE,
+            formatter: LoggingTransformer.multiLineFormatter,
           )
         ],
       );
 
-      store.add(1);
+      scheduleMicrotask(() {
+        store.add(1);
+      });
 
-      await expect(logger.onRecord, emitsInOrder([new logLevel(Level.SEVERE)]));
-
-      store.close();
+      await expect(
+        logger.onRecord,
+        emits(new logLevel(Level.SEVERE)),
+      );
     });
   });
 }

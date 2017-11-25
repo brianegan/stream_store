@@ -1,7 +1,6 @@
 import "package:stream_store/stream_store.dart";
 import "package:test/test.dart";
 import "test_utils.dart";
-import 'package:rxdart/rxdart.dart';
 
 void main() {
   group("Effects", () {
@@ -9,8 +8,7 @@ void main() {
 
     test("transform but cannot swallow actions", () async {
       final transformer = new EffectTransformer(send1Effect);
-      final store =
-          new Store(identityReducer, actionTransformers: [transformer]);
+      final store = new Store(identityReducer, transformers: [transformer]);
 
       store.add(TestActions.SEND1);
 
@@ -19,7 +17,7 @@ void main() {
     });
 
     test("can be combined", () async {
-      final store = new Store(identityReducer, actionTransformers: [
+      final store = new Store(identityReducer, transformers: [
         new EffectTransformer.combine([
           send1Effect,
           send2Effect,
@@ -42,7 +40,7 @@ void main() {
     test("more than one transformer is supported", () async {
       final transformer1 = new EffectTransformer(send1Effect);
       final transformer2 = new EffectTransformer(send2Effect);
-      final store = new Store(identityReducer, actionTransformers: [
+      final store = new Store(identityReducer, transformers: [
         transformer1,
         transformer2,
       ]);
@@ -57,7 +55,7 @@ void main() {
       final transformer = new EffectTransformer(cancellableResponse);
       final store = new Store(
         identityReducer,
-        actionTransformers: [transformer],
+        transformers: [transformer],
       );
 
       store.add(TestActions.SEND1);
@@ -77,7 +75,7 @@ void main() {
       final transformer = new EffectTransformer(cancellableResponse);
       final store = new Store(
         identityReducer,
-        actionTransformers: [transformer],
+        transformers: [transformer],
       );
 
       store.add(TestActions.SEND1);
@@ -98,7 +96,7 @@ void main() {
       final transformer = new EffectTransformer(respondTwiceEffect);
       final store = new Store(
         identityReducer,
-        actionTransformers: [transformer],
+        transformers: [transformer],
       );
 
       store.add(TestActions.SEND1);

@@ -8,8 +8,6 @@ void main() {
     test("should accept an initial state", () async {
       final store = new Store(identityReducer, initialState: 0);
 
-      store.add(0);
-
       await expect(store, emits(0));
     });
 
@@ -39,22 +37,7 @@ void main() {
       final store = new Store(
         identityReducer,
         initialState: 0,
-        actionTransformers: [doubler, doubler, doubler], // triple doubler!!!
-      );
-
-      store.add(1);
-
-      await expect(store, emitsInOrder([0, 8]));
-    });
-
-    test("runs the reduced state through the provided transformers", () async {
-      final doubler = new StreamTransformer.fromHandlers(
-        handleData: (int state, EventSink<int> sink) => sink.add(state * 2),
-      );
-      final store = new Store(
-        identityReducer,
-        initialState: 0,
-        stateTransformers: [doubler, doubler, doubler], // triple doubler!!!
+        transformers: [doubler, doubler, doubler], // triple doubler!!!
       );
 
       store.add(1);

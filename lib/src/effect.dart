@@ -27,7 +27,7 @@ import 'package:rxdart/streams.dart';
 ///           api.search((action as PerformSearch).searchTerm)
 ///           .then((results) => new SearchResultsAction(results))
 ///           .catchError((error) => new SearchErrorAction(error)));
-typedef Stream<Object> Effect(Stream<Object> actions);
+typedef Stream<dynamic> Effect(Stream<dynamic> actions);
 
 /// Wraps the `Effect` in a proper StreamTransformer so it can be used
 /// as part of the construction of the `Store`.
@@ -39,22 +39,31 @@ typedef Stream<Object> Effect(Stream<Object> actions);
 ///       initialState: 0,
 ///       transformers: [new EffectTransformer(searchEffect)],
 ///     );
-class EffectTransformer implements StreamTransformer<Object, Object> {
+class EffectTransformer implements StreamTransformer<dynamic, dynamic> {
   final Effect effect;
 
   EffectTransformer(this.effect);
 
-  factory EffectTransformer.combine(List<Effect> effects) =>
-      new EffectTransformer((actions) =>
-          new MergeStream(effects.map((effect) => effect(actions))));
+  factory EffectTransformer.combine(List<Effect> effects) {
+    return new EffectTransformer((actions) {
+      return new MergeStream(effects.map((effect) => effect(actions)));
+    });
+  }
 
   @override
-  Stream<Object> bind(Stream<Object> actions) {
-    final controller = new StreamController<Object>.broadcast();
+  Stream<dynamic> bind(Stream<dynamic> actions) {
+    final controller = new StreamController<dynamic>.broadcast();
 
-    actions.listen(controller.add, onError: controller.addError);
-    effect(actions).listen(controller.add,
-        onError: controller.addError, onDone: controller.close);
+    actions.listen(
+      controller.add,
+      onError: controller.addError,
+    );
+
+    effect(actions).listen(
+      controller.add,
+      onError: controller.addError,
+      onDone: controller.close,
+    );
 
     return controller.stream;
   }

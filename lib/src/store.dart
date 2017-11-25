@@ -3,31 +3,32 @@ import 'package:rxdart/subjects.dart';
 import 'package:stream_store/src/reducer.dart';
 import 'package:stream_store/src/states.dart';
 
-class Store<S> extends StreamView<S> implements Sink<Object> {
-  final Sink<Object> _actions;
+class Store<S> extends StreamView<S> implements Sink<dynamic> {
+  final Sink<dynamic> _actions;
   final Sink<Reducer<S>> _reducers;
+  final States<S> _states;
 
-  Store._(this._actions, this._reducers, Stream<S> _states) : super(_states);
+  Store._(this._actions, this._reducers, this._states) : super(_states.stream);
 
   factory Store(
     Reducer<S> reducer, {
     S initialState,
-    List<StreamTransformer<Object, Object>> actionTransformers = const [],
-    List<StreamTransformer<S, S>> stateTransformers = const [],
+    List<StreamTransformer<dynamic, dynamic>> transformers = const [],
   }) {
     // ignore: close_sinks
     final actions = new StreamController.broadcast();
     // ignore: close_sinks
     final reducers = new BehaviorSubject<Reducer<S>>(seedValue: reducer);
     // ignore: close_sinks
-    final states = new States(
+    final states = new States<S>(
         initialState,
         reducers.stream,
-        actionTransformers.fold(actions.stream,
-            (stream, transformer) => stream.transform(transformer)),
-        stateTransformers);
+        transformers.fold(
+          actions.stream,
+          (stream, transformer) => stream.transform(transformer),
+        ));
 
-    return new Store._(actions, reducers, states.stream);
+    return new Store._(actions, reducers, states);
   }
 
   void set reducer(Reducer<S> reducer) {
@@ -36,13 +37,15 @@ class Store<S> extends StreamView<S> implements Sink<Object> {
   }
 
   @override
-  void add(Object action) {
+  void add(dynamic action) {
     _actions.add(action);
   }
 
   @override
   void close() {
     _actions.close();
+    _reducers.close();
+    _states.close();
   }
 }
 
