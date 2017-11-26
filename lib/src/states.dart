@@ -1,11 +1,26 @@
 import 'dart:async';
+import 'package:rxdart/rxdart.dart';
+import 'package:rxdart/src/subjects/subject.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:rxdart/transformers.dart';
 import 'package:stream_store/src/reducer.dart';
 
-class States<S> extends BehaviorSubject<S> {
-  States(S initialState, Stream<Reducer<S>> reducers, Stream<Object> actions)
-      : super(seedValue: initialState) {
+class States<S> extends Subject<S> {
+  States._(
+    StreamController<S> controller,
+    Observable<S> observable,
+  )
+      : super(controller, observable);
+
+  factory States(
+    S initialState,
+    Stream<Reducer<S>> reducers,
+    Stream<Object> actions,
+  ) {
+    final subject = new BehaviorSubject(
+      seedValue: initialState,
+    );
+
     actions
         .transform(
           new WithLatestFromStreamTransformer(
@@ -23,7 +38,13 @@ class States<S> extends BehaviorSubject<S> {
             initialState,
           ),
         )
-        .listen(add, onError: addError, onDone: close);
+        .listen(
+          subject.add,
+          onError: subject.addError,
+          onDone: subject.close,
+        );
+
+    return new States._(subject.controller, subject.stream);
   }
 }
 
