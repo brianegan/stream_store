@@ -29,20 +29,19 @@ void main() {
       await expect(store, emitsInOrder([0, 0, -1]));
     });
 
-    test("runs actions through the provided transformers", () async {
-      final doubler = new StreamTransformer.fromHandlers(
-        handleData: (Object action, EventSink<Object> sink) =>
-            action is int ? sink.add(action * 2) : sink.add(action),
-      );
-      final store = new Store(
-        identityReducer,
+    test("runs actions through the provided effects", () async {
+      final doubler = (Stream<int> states, Stream<dynamic> actions) {
+        return actions.map((action) => action is int ? action * 2 : action);
+      };
+      final store = new Store<int>(
+        (state, action) => action is int ? action : state,
         initialState: 0,
-        transformers: [doubler, doubler, doubler], // triple doubler!!!
+        effects: [doubler, doubler, doubler], // triple doubler!!!
       );
 
       store.add(1);
 
-      await expect(store, emitsInOrder([0, 8]));
+      await expect(store, emitsInOrder([0, 1, 2, 2, 2]));
     });
   });
 }

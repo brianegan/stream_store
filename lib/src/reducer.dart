@@ -15,10 +15,10 @@
 ///           return state;
 ///       }
 ///     }
-typedef S Reducer<S>(S state, Object action);
+typedef S Reducer<S>(S state, dynamic action);
 
 Reducer<T> combineReducers<T>(List<Reducer<T>> reducers) =>
-    (T state, Object action) => reducers.fold(
+    (T state, dynamic action) => reducers.fold(
           state,
           (currentState, reducer) => reducer(currentState, action),
         );

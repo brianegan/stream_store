@@ -9,37 +9,60 @@ enum TestActions {
 }
 
 // Effects
-Stream<Object> send1Effect(Stream<Object> actions) {
+Stream<dynamic> send1Effect(
+  Stream<TestActions> states,
+  Stream<dynamic> actions,
+) {
   return actions
       .where((action) => action == TestActions.SEND1)
       .map((action) => TestActions.RESPOND1);
 }
 
-Stream<Object> send2Effect(Stream<Object> actions) {
+Stream<dynamic> send2Effect(
+  Stream<TestActions> states,
+  Stream<dynamic> actions,
+) {
   return actions
       .where((action) => action == TestActions.SEND2)
       .map((action) => TestActions.RESPOND2);
 }
 
-Stream<Object> cancellableResponse(Stream<Object> actions) =>
-    new Observable(actions)
-        .where((action) => action == TestActions.SEND1)
-        .flatMap((action) => new Observable.timer(
-                TestActions.RESPOND1, new Duration(milliseconds: 1))
-            .takeUntil(actions.where((action) => action == TestActions.SEND2)));
+Stream<dynamic> cancellableResponse(
+  Stream<TestActions> states,
+  Stream<dynamic> actions,
+) {
+  return new Observable(actions)
+      .where((action) => action == TestActions.SEND1)
+      .flatMap((action) => new Observable.timer(
+              TestActions.RESPOND1, new Duration(milliseconds: 1))
+          .takeUntil(actions.where((action) => action == TestActions.SEND2)));
+}
 
-Stream<Object> respondTwiceEffect(Stream<Object> actions) =>
-    new Observable(actions)
-        .where((action) => action == TestActions.SEND1)
-        .flatMap((action) => new Observable.merge([
-              new Observable.just(TestActions.RESPOND1),
-              new Observable.just(TestActions.RESPOND2).debounce(
-                new Duration(milliseconds: 5),
-              )
-            ]));
+Stream<dynamic> respondTwiceEffect(
+  Stream<TestActions> states,
+  Stream<dynamic> actions,
+) {
+  return new Observable(actions)
+      .where((action) => action == TestActions.SEND1)
+      .flatMap((action) => new Observable.merge([
+            new Observable.just(TestActions.RESPOND1),
+            new Observable.just(TestActions.RESPOND2).debounce(
+              new Duration(milliseconds: 5),
+            )
+          ]));
+}
+
+Stream<dynamic> readStateEffect(
+  Stream<TestActions> states,
+  Stream<dynamic> actions,
+) {
+  return new Observable(actions)
+      .where((action) => action == TestActions.SEND1)
+      .withLatestFrom(states, (action, state) => state);
+}
 
 // Reducers
-Object identityReducer(Object state, Object action) => action;
+dynamic identityReducer(dynamic state, dynamic action) => action;
 
 int addReducer(int state, Object action) =>
     action is int ? state + action : state;

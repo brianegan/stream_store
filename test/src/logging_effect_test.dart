@@ -4,21 +4,24 @@ import "package:stream_store/stream_store.dart";
 import "package:test/test.dart";
 
 void main() {
-  group("LoggingTransformer", () {
+  group("LoggingEffect", () {
     int addReducer(int state, action) => action is int ? state + action : state;
 
     test("logs actions and state to the given logger", () async {
-      final transformer = new LoggingTransformer();
+      final effect = new LoggingEffect.printer();
       // ignore: close_sinks
-      final store =
-          new Store(addReducer, initialState: 1, transformers: [transformer]);
+      final store = new Store(
+        addReducer,
+        initialState: 0,
+        effects: [effect],
+      );
 
       scheduleMicrotask(() {
         store.add(1);
       });
 
       await expect(
-        transformer.logger.onRecord,
+        effect.logger.onRecord,
         emits(new logMessageContains(["{Action: 1, "])),
       );
     });
@@ -29,11 +32,11 @@ void main() {
       final store = new Store(
         addReducer,
         initialState: 0,
-        transformers: [
-          new LoggingTransformer(
+        effects: [
+          new LoggingEffect.printer(
             logger: logger,
             level: Level.SEVERE,
-            formatter: LoggingTransformer.multiLineFormatter,
+            formatter: LoggingEffect.multiLineFormatter,
           )
         ],
       );

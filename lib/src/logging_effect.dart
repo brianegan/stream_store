@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:logging/logging.dart';
+import 'package:rxdart/streams.dart';
+import 'package:rxdart/transformers.dart';
 
-class LoggingTransformer implements StreamTransformer<dynamic, dynamic> {
+class LoggingEffect<S> {
   /// The [Logger] instance that actions will be logged to.
   final Logger logger;
 
@@ -9,64 +11,84 @@ class LoggingTransformer implements StreamTransformer<dynamic, dynamic> {
   final Level level;
 
   /// A function that formats the String for printing
-  final MessageFormatter formatter;
+  final MessageFormatter<S> formatter;
 
   /// but it will not print to the console or anything else.
-  LoggingTransformer({
+  LoggingEffect({
     Logger logger,
     this.level = Level.INFO,
     this.formatter = singleLineFormatter,
   })
-      : this.logger = logger ?? new Logger("LoggingTransformer");
+      : this.logger = logger ?? new Logger("LoggingEffect");
 
-  /// A helper factory for creating a piece of LoggingTransformer that only
+  /// A helper factory for creating a piece of LoggingEffect that only
   /// prints to the console.
-  factory LoggingTransformer.printer({
+  factory LoggingEffect.printer({
     Logger logger,
     Level level = Level.INFO,
     MessageFormatter formatter = singleLineFormatter,
   }) {
-    final middleware = new LoggingTransformer(
+    final effect = new LoggingEffect(
       logger: logger,
       level: level,
-      formatter: singleLineFormatter,
+      formatter: formatter,
     );
 
-    middleware.logger.onRecord
-        .where((record) => record.loggerName == middleware.logger.name)
+    effect.logger.onRecord
+        .where((record) => record.loggerName == effect.logger.name)
         .listen(print);
 
-    return middleware;
+    return effect;
   }
 
   /// A simple formatter that puts all data on one line
   static String singleLineFormatter<State>(
+    State state,
     action,
     DateTime timestamp,
   ) {
-    return "{Action: $action, ts: ${new DateTime.now()}}";
+    return "{Action: $action, State: ${state}, ts: ${new DateTime.now()}}";
   }
 
   /// A formatter that puts each attribute on it's own line
   static String multiLineFormatter<State>(
+    State state,
     action,
     DateTime timestamp,
   ) {
     return "{\n" +
         "  Action: $action,\n" +
+        "  State: ${state},\n" +
         "  Timestamp: ${new DateTime.now()}\n" +
         "}";
   }
 
-  @override
-  Stream<dynamic> bind(Stream<dynamic> actions) {
-    actions.listen(
-        (action) {
-          logger.log(level, formatter(action, new DateTime.now()));
-        });
+  Stream<dynamic> call(Stream<S> states, Stream<dynamic> actions) {
+    final combined = new WithLatestFromStreamTransformer(
+      actions,
+      (S state, dynamic action) => new _StateAndAction(state, action),
+    );
 
-    return actions;
+    states.transform(combined).listen((stateAndAction) {
+      logger.log(
+        level,
+        formatter(
+          stateAndAction.state,
+          stateAndAction.action,
+          new DateTime.now(),
+        ),
+      );
+    });
+
+    return new NeverStream();
   }
+}
+
+class _StateAndAction<S> {
+  final S state;
+  final dynamic action;
+
+  _StateAndAction(this.state, this.action);
 }
 
 /// A function that formats the message that will be logged. By default, the
@@ -74,31 +96,31 @@ class LoggingTransformer implements StreamTransformer<dynamic, dynamic> {
 ///
 /// This package ships with two formatters out of the box:
 ///
-///   - [LoggingTransformer.singleLineFormatter]
-///   - [LoggingTransformer.multiLineFormatter]
+///   - [LoggingEffect.singleLineFormatter]
+///   - [LoggingEffect.multiLineFormatter]
 ///
 /// ### Example
 ///
 ///     // Create a formatter that only prints out the dispatched action
 ///     String onlyLogActionFormatter<State>(
+///         State state,
 ///         action,
 ///         DateTime timestamp,
 ///         ) {
 ///       return "{Action: $action}";
 ///     }
 ///
-///     // Create your middleware using the formatter.
-///     final transformer = new LoggingTransformer(
-///       formatter: onlyLogActionFormatter,
-///     );
+///     // Create your effect using the formatter.
+///     final effect = new LoggingEffect(formatter: onlyLogActionFormatter);
 ///
-///     // Add the middleware to your Store
+///     // Add the effect to your Store
 ///     final store = new Store<int>(
-///           (int state, action) => state + 1,
+///       (int state, action) => state + 1,
 ///       initialState: 0,
-///       transformer: [middleware],
+///       effects: [effect],
 ///     );
-typedef String MessageFormatter(
+typedef String MessageFormatter<State>(
+  State state,
   dynamic action,
   DateTime timestamp,
 );

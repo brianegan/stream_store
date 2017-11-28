@@ -1,6 +1,6 @@
 name: stream_store
 description: A Redux-style Store implemented using core Dart Stream primitives
-version: 0.0.2
+version: 0.1.0
 homepage: https://github.com/brianegan/stream_store
 author: brian.egan <brian@brianegan.com>
 
